@@ -219,6 +219,7 @@ input[type="range"]:hover::-moz-range-thumb {
 @media (max-width: 600px) {
     .roi-calculator {
         padding: 20px;
+        color: white; /* Change text color to white on mobile */
     }
 
     .input-section {

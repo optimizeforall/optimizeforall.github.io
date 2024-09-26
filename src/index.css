@@ -1,0 +1,134 @@
+:root {
+    --primary-color: #4CAF50;
+    --background-color: #1a1a1a;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    margin: 0;
+    padding: 20px;
+}
+
+.roi-calculator {
+    max-width: 800px;
+    margin: 0 auto;
+    background-color: var(--secondary-background);
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    padding: 20px;
+}
+
+h2 {
+    color: var(--primary-color);
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.input-section,
+.graph-section,
+.stats-section {
+    background-color: var(--tertiary-background);
+    border-radius: var(--border-radius);
+    padding: 15px;
+    margin-bottom: 1rem;
+}
+
+label {
+    display: block;
+    font-weight: bold;
+    color: #b0b0b0;
+    margin-bottom: 0.5rem;
+}
+
+input,
+select {
+    width: calc(100% - 10px);
+    /* Adjust width to account for right margin */
+    border: 1px solid #4a4a4a;
+    border-radius: 4px;
+    font-size: 1rem;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    padding: 5px;
+    margin-bottom: 1rem;
+    margin-right: 10px;
+    /* Add right margin */
+}
+
+input[type="range"] {
+
+    -webkit-appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: #4a4a4a;
+    outline: none;
+    opacity: 0.7;
+    transition: opacity .2s;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+}
+
+.slider-value {
+    display: inline-block;
+    width: 40px;
+    text-align: right;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+    font-size: 1rem;
+}
+
+.stat-value {
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.custom-package,
+.transparency,
+.guarantee {
+    background-color: var(--tertiary-background);
+    border-radius: var(--border-radius);
+    margin-top: 1rem;
+    padding: 10px;
+}
+
+.custom-package h3,
+.transparency h3,
+.guarantee h3 {
+    margin-top: 0;
+    color: var(--primary-color);
+    font-size: 1.1rem;
+}
+
+.guarantee {
+    border: 2px solid var(--primary-color);
+}
+
+#roiChart {
+    width: 100%;
+    height: 300px;
+}

@@ -245,3 +245,15 @@ input[type="range"]:hover::-moz-range-thumb {
         grid-template-columns: 1fr;
     }
 }
+
+.roi-calculator,
+.input-control,
+.guarantee {
+    color: white; /* Set text color to white for all sections */
+}
+
+.input-control input,
+.input-control select {
+    color: white; /* Set input and select text color to white */
+    background-color: var(--input-bg-color); /* Keep the background color */
+}

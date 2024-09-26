@@ -17,144 +17,129 @@
   <div id="roi-calculator-root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useRef } = React;
+    const { useState, useEffect, useRef, useCallback } = React;
 
-    function ROICalculator() {
-      const [leadsPackage, setLeadsPackage] = useState("5555");
-      const [conversionRate, setConversionRate] = useState(4.5);
-      const [closeRate, setCloseRate] = useState(50);
-      const [profitPerLead, setProfitPerLead] = useState(1000);
-      const [leadsPerDay, setLeadsPerDay] = useState(50);
-      const [retentionRate, setRetentionRate] = useState(0);
-      const [monthlyRetainer, setMonthlyRetainer] = useState(0);
-      const [customPackage, setCustomPackage] = useState({
-        leads: 5555,
-        cost: 10000,
-      });
-      const [commissionRate, setCommissionRate] = useState(0);
+    const ROICalculator = () => {
+      const [leadsPackage, setLeadsPackage] = useState('5555');
+      const [conversionRate, setConversionRate] = useState(3);
+      const [closeRate, setCloseRate] = useState(30);
+      const [profitPerLead, setProfitPerLead] = useState(100);
+      const [leadsPerDay, setLeadsPerDay] = useState(100);
+      const [retentionRate, setRetentionRate] = useState(80);
+      const [monthlyRetainer, setMonthlyRetainer] = useState(1000);
       const [stats, setStats] = useState({});
+      // add custom leads and cost
+      const [customLeads, setCustomLeads] = useState(500); // Default to 500
+      const [customCost, setCustomCost] = useState(300); // Default to 300
       const chartRef = useRef(null);
       const chartInstance = useRef(null);
 
-      useEffect(() => {
-        calculateROI();
-      }, [leadsPackage, conversionRate, closeRate, profitPerLead, leadsPerDay, retentionRate, monthlyRetainer, customPackage, commissionRate]);
+      const calculateForDays = useCallback((days) => {
 
-      const calculateROI = () => {
-        let initialCost, totalLeads;
-        if (leadsPackage === "custom") {
-          initialCost = customPackage.cost;
-          totalLeads = customPackage.leads;
-        } else {
-          initialCost = leadsPackage === "5555" ? 10000 : 2000;
-          totalLeads = leadsPackage === "5555" ? 5555 : 1000;
+        // theres something wrong with this and I'm not sure what,
+        // custom leads do not show up as input in the form, but the value is there
+        const totalLeads = leadsPackage === 'custom' ? customLeads : parseInt(leadsPackage) || 0;
+        const initialCost = leadsPackage === 'custom' ? customCost : (leadsPackage === '5555' ? 10000 : 2000);
+        const commissionRate = 10;
+
+
+        const safeConversionRate = Number(conversionRate) || 0;
+        const safeCloseRate = Number(closeRate) || 0;
+        const safeProfitPerLead = Number(profitPerLead) || 0;
+        const safeLeadsPerDay = Number(leadsPerDay) || 1;
+        const safeRetentionRate = Number(retentionRate) || 0;
+        const safeMonthlyRetainer = Number(monthlyRetainer) || 0;
+
+        let cumulativeProfit = -initialCost;
+        let remainingLeads = totalLeads;
+        let customersServed = 0;
+        let activeCustomers = 0;
+        let monthsPassed = 0;
+
+        for (let day = 1; day <= days; day++) {
+          if (remainingLeads > 0) {
+            const leadsUsed = Math.min(remainingLeads, safeLeadsPerDay);
+            const newConversions = leadsUsed * (safeConversionRate / 100) * (safeCloseRate / 100);
+            const dailyNewProfit = newConversions * safeProfitPerLead;
+            cumulativeProfit += dailyNewProfit;
+            remainingLeads -= leadsUsed;
+            customersServed += newConversions;
+            activeCustomers += newConversions;
+          }
+
+          const dailyRetainedRevenue = (activeCustomers * safeProfitPerLead * (safeRetentionRate / 100)) / 30;
+          cumulativeProfit += dailyRetainedRevenue;
+
+          if (day % 30 === 0) {
+            cumulativeProfit -= safeMonthlyRetainer;
+            monthsPassed++;
+            activeCustomers = Math.floor(activeCustomers * (safeRetentionRate / 100));
+          }
         }
 
-        const daysToComplete = Math.ceil(totalLeads / leadsPerDay);
+        const remainingDays = days % 30;
+        if (remainingDays > 0) {
+          cumulativeProfit -= (safeMonthlyRetainer / 30) * remainingDays;
+        }
 
-        console.log(`Debug: initialCost = ${initialCost}, totalLeads = ${totalLeads}, daysToComplete = ${daysToComplete}`);
+        const commission = cumulativeProfit * (commissionRate / 100);
+        const netProfit = cumulativeProfit - commission;
+        const roi = initialCost !== 0 ? (netProfit / initialCost) * 100 : 0;
 
-        const calculateForDays = (days) => {
-          let cumulativeProfit = 0;
-          let remainingLeads = totalLeads;
-          let totalCustomers = 0;
-          let monthlyNewCustomers = 0;
-
-          for (let day = 1; day <= days; day++) {
-            // Process new leads
-            if (remainingLeads > 0) {
-              const leadsUsed = Math.min(remainingLeads, leadsPerDay);
-              const newConversions = leadsUsed * (conversionRate / 100) * (closeRate / 100);
-              monthlyNewCustomers += newConversions;
-              remainingLeads -= leadsUsed;
-            }
-
-            // Apply retention and add new customers at the end of each month
-            if (day % 30 === 0 || day === days) {
-              totalCustomers = (totalCustomers * (retentionRate / 100)) + monthlyNewCustomers;
-              monthlyNewCustomers = 0;
-            }
-
-            // Calculate daily revenue based on current customers
-            const dailyRevenue = (totalCustomers * profitPerLead) / 30; // Monthly profit per customer spread over 30 days
-            cumulativeProfit += dailyRevenue;
-
-            // Subtract monthly retainer at the end of each month
-            if (day % 30 === 0 || day === days) {
-              cumulativeProfit -= monthlyRetainer;
-            }
-          }
-
-          const commission = cumulativeProfit * (commissionRate / 100);
-          const netProfit = cumulativeProfit - commission - initialCost;
-          const roi = (netProfit / initialCost) * 100;
-
-          // Ensure netProfit is not negative
-          if (netProfit < 0) {
-            return {
-              profit: 0,
-              roi: 0,
-              customers: Math.round(totalCustomers),
-              commission: Math.round(commission)
-            };
-          }
-
-          console.log(`Debug: For ${days} days - profit: ${Math.round(netProfit)}, roi: ${Math.round(roi)}, customers: ${Math.round(totalCustomers)}, commission: ${Math.round(commission)}`);
-
-          return {
-            profit: Math.round(netProfit),
-            roi: Math.round(roi),
-            customers: Math.round(totalCustomers),
-            commission: Math.round(commission)
-          };
+        return {
+          profit: Math.round(netProfit),
+          roi: Math.round(roi),
+          customersServed: Math.round(customersServed),
+          activeCustomers: Math.round(activeCustomers),
+          commission: Math.round(commission),
+          monthlyRetainerPaid: Math.round(safeMonthlyRetainer * monthsPassed + (safeMonthlyRetainer / 30) * remainingDays)
         };
+      }, [leadsPackage, customLeads, customCost, conversionRate, closeRate, profitPerLead, leadsPerDay, retentionRate, monthlyRetainer]);
 
-        const results = {
-          30: calculateForDays(30),
-          60: calculateForDays(60),
-          90: calculateForDays(90),
-          120: calculateForDays(120),
-        };
-
-        // Calculate additional stats
-        const dailyRevenue = (totalLeads / daysToComplete) * (conversionRate / 100) * (closeRate / 100) * profitPerLead;
-        const lifetimeValue = profitPerLead * (1 / (1 - (retentionRate / 100)));
-        setStats({
-          dailyRevenue: Math.round(dailyRevenue),
-          lifetimeValue: Math.round(lifetimeValue),
-          totalCustomers: results[120].customers,
-          returnOnInvestment: results[120].roi,
-          commission: results[120].commission,
-          yourProfit: results[120].profit
-        });
-
-        updateChart(results);
-      };
-      const updateChart = (results) => {
-        const ctx = chartRef.current.getContext('2d');
+      const updateChart = useCallback(() => {
+        const ctx = chartRef.current?.getContext('2d');
+        if (!ctx) return; // Exit if canvas context is not available
 
         if (chartInstance.current) {
           chartInstance.current.destroy();
         }
 
+        const days = 90;
+        const profitData = [];
+        const customersServedData = [];
+
+        for (let i = 0; i <= days; i++) {
+          const result = calculateForDays(i);
+          profitData.push(result.profit);
+          customersServedData.push(result.customersServed);
+        }
+
         chartInstance.current = new Chart(ctx, {
           type: 'line',
           data: {
-            labels: ['0 Days', '30 Days', '60 Days', '90 Days'],
+            labels: Array.from({length: days + 1}, (_, i) => `Day ${i}`),
             datasets: [
               {
                 label: 'Profit ($)',
-                data: [0, results[30].profit, results[60].profit, results[90].profit],
-                borderColor: '#4CAF50', // Green color for profit
+                data: profitData,
+                borderColor: '#4CAF50',
                 backgroundColor: 'rgba(76, 175, 80, 0.1)',
                 yAxisID: 'y',
+                stepped: false, // Change to false for smooth lines
+                tension: 0.4, // Add tension for curve
+                pointRadius: 0, // Keep points hidden
+                borderWidth: 2, // Adjust line thickness
               },
               {
-                label: 'Customers',
-                data: [0, results[30].customers, results[60].customers, results[90].customers],
-                borderColor: '#2196F3', // Blue color for customers
+                label: 'Customers Served',
+                data: customersServedData,
+                borderColor: '#2196F3',
                 backgroundColor: 'rgba(33, 150, 243, 0.1)',
                 yAxisID: 'y1',
+                stepped: false, // Change to false for smooth lines
+                tension: 0.4, // Add tension for curve
+                pointRadius: 0, // Keep points hidden
+                borderWidth: 2, // Adjust line thickness
               },
             ]
           },
@@ -162,6 +147,15 @@
             responsive: true,
             maintainAspectRatio: false,
             scales: {
+              x: {
+                ticks: {
+                  callback: function(value, index) {
+                    return [0, 30, 60, 90].includes(index) ? `Day ${index}` : '';
+                  },
+                  maxRotation: 0,
+                  autoSkip: false,
+                }
+              },
               y: {
                 type: 'linear',
                 display: true,
@@ -177,138 +171,198 @@
                 position: 'right',
                 title: {
                   display: true,
-                  text: 'Customers'
+                  text: 'Customers Served'
                 },
                 grid: {
                   drawOnChartArea: false,
                 }
               }
-            }
+            },
+            plugins: {
+              tooltip: {
+                mode: 'index',
+                intersect: false,
+              },
+              legend: {
+                position: 'top',
+              }
+            },
           }
         });
-      };
+      }, [calculateForDays]);
+
+      const calculateROI = useCallback(() => {
+        const results = {
+          30: calculateForDays(30),
+          60: calculateForDays(60),
+          90: calculateForDays(90),
+        };
+
+        setStats({
+          dailyRevenue: Math.round(results[30].profit / 30),
+          lifetimeValue: Math.round(profitPerLead * (1 / (1 - (retentionRate / 100)))),
+          totalCustomersServed: results[60].customersServed,
+          activeCustomers: results[60].activeCustomers,
+          returnOnInvestment: results[60].roi,
+          commission: results[60].commission,
+          yourProfit: results[60].profit,
+          monthlyRetainerPaid: results[60].monthlyRetainerPaid
+        });
+
+        updateChart();
+      }, [calculateForDays, updateChart, profitPerLead, retentionRate]);
+
+      useEffect(() => {
+        calculateROI();
+      }, [calculateROI]);
 
       return (
         <div className="roi-calculator">
           <h2>Lead System ROI Calculator</h2>
+          <div className="title-spacer"></div>
           <div className="input-section">
-            <label>
-              Leads Package:
-              <select
-                value={leadsPackage}
-                onChange={(e) => setLeadsPackage(e.target.value)}
-              >
-                <option value="5555">5,555 leads for $10,000</option>
-                <option value="1000">1,000 leads for $2,000</option>
-                <option value="custom">Custom Package</option>
-              </select>
-            </label>
-            {leadsPackage === "custom" && (
-              <div className="custom-package">
-                <h3>Custom Package</h3>
-                <label>
-                  Number of Leads:
-                  <input
-                    type="number"
-                    value={customPackage.leads}
-                    onChange={(e) => setCustomPackage({ ...customPackage, leads: parseInt(e.target.value) })}
-                    min="0"
-                  />
-                </label>
-                <label>
-                  Package Cost ($):
-                  <input
-                    type="number"
-                    value={customPackage.cost}
-                    onChange={(e) => setCustomPackage({ ...customPackage, cost: parseInt(e.target.value) })}
-                    min="0"
-                  />
-                </label>
-                <label>
-                  Our Commission Rate:
-                  <input
-                    type="range"
-                    min="0"
-                    max="50"
-                    step="1"
-                    value={commissionRate}
-                    onChange={(e) => setCommissionRate(parseInt(e.target.value))}
-                    title="The percentage of profit we take as commission"
-                  />
-                  <span className="slider-value">{commissionRate}%</span>
-                </label>
+            <div className="input-group">
+              <label htmlFor="leadsPackage">Lead Package:</label>
+              <div className="input-control">
+                <select
+                  id="leadsPackage"
+                  value={leadsPackage}
+                  onChange={(e) => {
+                    setLeadsPackage(e.target.value);
+                    if (e.target.value !== 'custom') {
+                      setCustomLeads(0); // Reset custom leads
+                      setCustomCost(0); // Reset custom cost
+                    }
+                  }}
+                >
+                  <option value="5555">5,555 Leads - $10,000</option>
+                  <option value="1000">1,000 Leads - $2,000</option>
+                  <option value="custom">Custom Package</option>
+                </select>
               </div>
+            </div>
+
+            {leadsPackage === 'custom' && (
+              <>
+                <div className="input-group">
+                  <label htmlFor="customLeads">Custom Leads:</label>
+                  <div className="input-control">
+                    <input
+                      type="number"
+                      id="customLeads"
+                      value={customLeads}
+                      onChange={(e) => setCustomLeads(parseInt(e.target.value))}
+                    />
+                  </div>
+                </div>
+
+                <div className="input-group">
+                  <label htmlFor="customCost">Custom Cost:</label>
+                  <div className="input-control">
+                    <input
+                      type="number"
+                      id="customCost"
+                      value={customCost}
+                      onChange={(e) => setCustomCost(parseInt(e.target.value))}
+                    />
+                  </div>
+                </div>
+              </>
             )}
-            <label>
-              Conversion Rate (2%-7% is average):
-              <input
-                type="range"
-                min="1"
-                max="10"
-                step="0.1"
-                value={conversionRate}
-                onChange={(e) => setConversionRate(parseFloat(e.target.value))}
-                title="The percentage of leads that respond to the message with interest"
-              />
-              <span className="slider-value">{conversionRate.toFixed(1)}%</span>
-            </label>
-            <label>
-              Close Rate (10%-50% is average):
-              <input
-                type="range"
-                min="1"
-                max="100"
-                step="1"
-                value={closeRate}
-                onChange={(e) => setCloseRate(parseInt(e.target.value))}
-                title="The percentage of interested leads that convert to sales"
-              />
-              <span className="slider-value">{closeRate}%</span>
-            </label>
-            <label>
-              Profit per Lead ($):
-              <input
-                type="number"
-                value={profitPerLead}
-                onChange={(e) => setProfitPerLead(parseInt(e.target.value))}
-                min="0"
-                title="The amount earned per successful sale, not what is paid per lead"
-              />
-            </label>
-            <label>
-              Leads Processed per Day:
-              <input
-                type="number"
-                value={leadsPerDay}
-                onChange={(e) => setLeadsPerDay(parseInt(e.target.value))}
-                min="1"
-                max="1000"
-                title="The number of SMS messages that can be sent every day"
-              />
-            </label>
-            <label>
-              Monthly Retention Rate:
-              <input
-                type="range"
-                min="0"
-                max="100"
-                step="1"
-                value={retentionRate}
-                onChange={(e) => setRetentionRate(parseInt(e.target.value))}
-                title="The percentage of customers that continue to generate revenue each month"
-              />
-              <span className="slider-value">{retentionRate}%</span>
-            </label>
-            <label>
-              Monthly Retainer ($):
-              <input
-                type="number"
-                value={monthlyRetainer}
-                onChange={(e) => setMonthlyRetainer(parseInt(e.target.value))}
-                min="0"
-                title="The monthly fee charged for ongoing services"
-              />
-            </label>
+
+            <div className="section-divider"></div>
+
+            <div className="input-group">
+              <label htmlFor="conversionRate">Conversion Rate:</label>
+              <div className="input-control">
+                <input
+                  type="range"
+                  id="conversionRate"
+                  min="1"
+                  max="10"
+                  step="0.1"
+                  value={conversionRate}
+                  onChange={(e) => setConversionRate(parseFloat(e.target.value))}
+                />
+                <span className="slider-value">{conversionRate.toFixed(1)}%</span>
+              </div>
+            </div>
+
+            <div className="input-group">
+              <label htmlFor="closeRate">Close Rate:</label>
+              <div className="input-control">
+                <input
+                  type="range"
+                  id="closeRate"
+                  min="1"
+                  max="100"
+                  step="1"
+                  value={closeRate}
+                  onChange={(e) => setCloseRate(parseInt(e.target.value))}
+                />
+                <span className="slider-value">{closeRate}%</span>
+              </div>
+            </div>
+
+            <div className="section-divider"></div>
+
+            <div className="input-group">
+              <label htmlFor="profitPerLead">Profit per Lead ($):</label>
+              <div className="input-control">
+                <input
+                  type="number"
+                  id="profitPerLead"
+                  value={profitPerLead}
+                  onChange={(e) => setProfitPerLead(parseInt(e.target.value))}
+                  min="0"
+                />
+              </div>
+            </div>
+
+            <div className="input-group">
+              <label htmlFor="leadsPerDay">Leads Processed per Day:</label>
+              <div className="input-control">
+                <input
+                  type="number"
+                  id="leadsPerDay"
+                  value={leadsPerDay}
+                  onChange={(e) => setLeadsPerDay(parseInt(e.target.value))}
+                  min="1"
+                  max="1000"
+                />
+              </div>
+            </div>
+
+            <div className="section-divider"></div>
+
+            <div className="input-group">
+              <label htmlFor="retentionRate">Monthly Retention Rate:</label>
+              <div className="input-control">
+                <input
+                  type="range"
+                  id="retentionRate"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={retentionRate}
+                  onChange={(e) => setRetentionRate(parseInt(e.target.value))}
+                />
+                <span className="slider-value">{retentionRate}%</span>
+              </div>
+            </div>
+
+            <div className="input-group">
+              <label htmlFor="monthlyRetainer">Monthly Retainer ($):</label>
+              <div className="input-control">
+                <input
+                  type="number"
+                  id="monthlyRetainer"
+                  value={monthlyRetainer}
+                  onChange={(e) => setMonthlyRetainer(parseInt(e.target.value))}
+                  min="0"
+                />
+              </div>
+            </div>
           </div>
           <div className="graph-section">
             <canvas id="roiChart" ref={chartRef}></canvas>
@@ -316,32 +370,34 @@
           <div className="stats-section">
             <div className="stats">
               <div className="stat-item">
-                <span>Potential Daily Revenue:</span>
+                <span>Potential Daily Revenue</span>
                 <span className="stat-value">${stats.dailyRevenue?.toLocaleString()}</span>
               </div>
               <div className="stat-item">
-                <span>Customer Lifetime Value:</span>
+                <span>Customer Lifetime Value</span>
                 <span className="stat-value">${stats.lifetimeValue?.toLocaleString()}</span>
               </div>
               <div className="stat-item">
-                <span>Total Customers in 120 Days:</span>
-                <span className="stat-value">{stats.totalCustomers?.toLocaleString()}</span>
+                <span>Total Customers Served in 60 Days</span>
+                <span className="stat-value">{stats.totalCustomersServed?.toLocaleString()}</span>
               </div>
               <div className="stat-item">
-                <span>120-Day Return on Investment:</span>
+                <span>60-Day Return on Investment</span>
                 <span className="stat-value">{stats.returnOnInvestment?.toLocaleString()}%</span>
               </div>
             </div>
             <div className="guarantee">
-              <h3>Money Back Guarantee</h3>
-              <p>If we don't hit 75% of these predictions, you get your money back!</p>
-              <div className="stat-item">
-                <span>Guaranteed Customers:</span>
-                <span className="stat-value">{Math.round(stats.totalCustomers * 0.75).toLocaleString()}</span>
-              </div>
-              <div className="stat-item">
-                <span>Guaranteed Profit:</span>
-                <span className="stat-value">${Math.round(stats.yourProfit * 0.75).toLocaleString()}</span>
+              <h3>60-Day Money Back Guarantee</h3>
+              <p>If we don't hit 75% of these predictions within 60 days, you get your money back!</p>
+              <div className="guarantee-stats">
+                <div className="stat-item">
+                  <span>Guaranteed Customers (60 days)</span>
+                  <span className="stat-value">{Math.round(stats.totalCustomersServed * 0.75).toLocaleString()}</span>
+                </div>
+                <div className="stat-item">
+                  <span>Guaranteed Profit (60 days)</span>
+                  <span className="stat-value">${Math.round(stats.yourProfit * 0.75).toLocaleString()}</span>
+                </div>
               </div>
             </div>
           </div>

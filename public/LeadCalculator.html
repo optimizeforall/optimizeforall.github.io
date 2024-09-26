@@ -33,6 +33,7 @@
       const [customCost, setCustomCost] = useState(300); // Default to 300
       const chartRef = useRef(null);
       const chartInstance = useRef(null);
+      const [chartRange, setChartRange] = useState(30); // Default to 30 days
 
       const calculateForDays = useCallback((days) => {
 
@@ -98,13 +99,13 @@
 
       const updateChart = useCallback(() => {
         const ctx = chartRef.current?.getContext('2d');
-        if (!ctx) return; // Exit if canvas context is not available
+        if (!ctx) return;
 
         if (chartInstance.current) {
           chartInstance.current.destroy();
         }
 
-        const days = 90;
+        const days = chartRange; // Use the selected chart range
         const profitData = [];
         const customersServedData = [];
 
@@ -125,10 +126,10 @@
                 borderColor: '#4CAF50',
                 backgroundColor: 'rgba(76, 175, 80, 0.1)',
                 yAxisID: 'y',
-                stepped: false, // Change to false for smooth lines
-                tension: 0.4, // Add tension for curve
-                pointRadius: 0, // Keep points hidden
-                borderWidth: 2, // Adjust line thickness
+                stepped: false,
+                tension: 0.4,
+                pointRadius: 0,
+                borderWidth: 2,
               },
               {
                 label: 'Customers Served',
@@ -136,10 +137,10 @@
                 borderColor: '#2196F3',
                 backgroundColor: 'rgba(33, 150, 243, 0.1)',
                 yAxisID: 'y1',
-                stepped: false, // Change to false for smooth lines
-                tension: 0.4, // Add tension for curve
-                pointRadius: 0, // Keep points hidden
-                borderWidth: 2, // Adjust line thickness
+                stepped: false,
+                tension: 0.4,
+                pointRadius: 0,
+                borderWidth: 2,
               },
             ]
           },
@@ -150,7 +151,7 @@
               x: {
                 ticks: {
                   callback: function(value, index) {
-                    return [0, 30, 60, 90].includes(index) ? `Day ${index}` : '';
+                    return [0, Math.floor(days/3), Math.floor(2*days/3), days].includes(index) ? `Day ${index}` : '';
                   },
                   maxRotation: 0,
                   autoSkip: false,
@@ -189,7 +190,13 @@
             },
           }
         });
-      }, [calculateForDays]);
+      }, [calculateForDays, chartRange]); // Add chartRange to the dependency array
+
+      const handleRangeChange = (e) => {
+        const newRange = parseInt(e.target.value);
+        setChartRange(newRange);
+        updateChart(); // Call updateChart directly after changing the range
+      };
 
       const calculateROI = useCallback(() => {
         const results = {
@@ -214,7 +221,7 @@
 
       useEffect(() => {
         calculateROI();
-      }, [calculateROI]);
+      }, [calculateROI, chartRange]); // Add chartRange to the dependency array
 
       return (
         <div className="roi-calculator">
@@ -361,6 +368,17 @@
                   onChange={(e) => setMonthlyRetainer(parseInt(e.target.value))}
                   min="0"
                 />
+              </div>
+            </div>
+
+            <div className="input-group">
+              <label htmlFor="chartRange">Select Chart Range (Days):</label>
+              <div className="input-control">
+                <select id="chartRange" value={chartRange} onChange={handleRangeChange}>
+                  <option value={30}>30 Days</option>
+                  <option value={60}>60 Days</option>
+                  <option value={90}>90 Days</option>
+                </select>
               </div>
             </div>
           </div>

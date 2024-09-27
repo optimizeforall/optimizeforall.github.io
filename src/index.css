@@ -197,6 +197,11 @@ input[type="range"]:hover::-moz-range-thumb {
     font-size: 1.1rem;
 }
 
+h3{
+    color: var(--primary-color);
+}
+
+
 .guarantee {
     margin-top: 30px;
     padding: 20px;

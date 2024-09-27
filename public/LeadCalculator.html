@@ -23,7 +23,7 @@
       const [leadsPackage, setLeadsPackage] = useState('5555');
       const [conversionRate, setConversionRate] = useState(3);
       const [closeRate, setCloseRate] = useState(30);
-      const [profitPerLead, setProfitPerLead] = useState(100);
+      const [profitPerLead, setProfitPerLead] = useState(1000);
       const [leadsPerDay, setLeadsPerDay] = useState(100);
       const [retentionRate, setRetentionRate] = useState(80);
       const [monthlyRetainer, setMonthlyRetainer] = useState(0);
@@ -205,19 +205,35 @@
           90: calculateForDays(90),
         };
 
+        const dailyLeads = Number(leadsPerDay) || 1;
+        const dailyCustomers = Math.max(0, Math.floor(dailyLeads * conversionRate));
+        const totalNewCustomersServed = dailyCustomers * 60;
+
+        // Calculate 60-day profit
+        const sixtyDayProfit = results[60].profit;
+
+        // Calculate 60-day cost to us (including retainer, commission, and package cost)
+        const retainerCost = monthlyRetainer * 2; // 2 months
+        const commissionCost = leadsPackage === 'custom' ? results[60].commission : 0;
+        const packageCost = leadsPackage === 'custom' ? customCost : (leadsPackage === '5555' ? 10000 : 2000);
+        const sixtyDayCostToUs = retainerCost + commissionCost + packageCost;
+
+        // Calculate 60-day ROI
+        const sixtyDayROI = ((sixtyDayProfit - sixtyDayCostToUs) / sixtyDayCostToUs) * 100;
+
         setStats({
-          dailyRevenue: Math.round(results[30].profit / 30),
+          dailyProfit: Math.round(results[30].profit / 30),
           lifetimeValue: Math.round(profitPerLead * (1 / (1 - (retentionRate / 100)))),
-          totalCustomersServed: results[60].customersServed,
+          totalNewCustomersServed,
           activeCustomers: results[60].activeCustomers,
-          returnOnInvestment: results[60].roi,
-          commission: results[60].commission,
-          yourProfit: results[60].profit,
-          monthlyRetainerPaid: results[60].monthlyRetainerPaid
+          sixtyDayProfit,
+          sixtyDayROI,
+          sixtyDayCostToUs,
+          commission: commissionCost,
         });
 
         updateChart();
-      }, [calculateForDays, updateChart, profitPerLead, retentionRate]);
+      }, [calculateForDays, updateChart, profitPerLead, retentionRate, leadsPerDay, conversionRate, monthlyRetainer, leadsPackage, customCost]);
 
       useEffect(() => {
         calculateROI();
@@ -386,37 +402,30 @@
             <canvas id="roiChart" ref={chartRef}></canvas>
           </div>
           <div className="stats-section">
+            <h3>Performance Statistics</h3>
             <div className="stats">
               <div className="stat-item">
-                <span>Potential Daily Revenue</span>
-                <span className="stat-value">${stats.dailyRevenue?.toLocaleString()}</span>
+                <span>Potential Daily Profit</span>
+                <span className="stat-value">${stats.dailyProfit?.toLocaleString()}</span>
               </div>
               <div className="stat-item">
                 <span>Customer Lifetime Value</span>
                 <span className="stat-value">${stats.lifetimeValue?.toLocaleString()}</span>
               </div>
               <div className="stat-item">
-                <span>Total Customers Served in 60 Days</span>
-                <span className="stat-value">{stats.totalCustomersServed?.toLocaleString()}</span>
+                <span>60-Day Profit</span>
+                <span className="stat-value">${stats.sixtyDayProfit?.toLocaleString()}</span>
               </div>
               <div className="stat-item">
-                <span>60-Day Return on Investment</span>
-                <span className="stat-value">{stats.returnOnInvestment?.toLocaleString()}%</span>
+                <span>60-Day Cost to Us (Retainer + Commission + Package Cost)</span>
+                <span className="stat-value">${stats.sixtyDayCostToUs?.toLocaleString()}</span>
               </div>
-            </div>
-            <div className="guarantee">
-              <h3>60-Day Money Back Guarantee</h3>
-              <p>If we don't hit 75% of these predictions within 60 days, you get your money back!</p>
-              <div className="guarantee-stats">
+              {leadsPackage === 'custom' && (
                 <div className="stat-item">
-                  <span>Guaranteed Customers (60 days)</span>
-                  <span className="stat-value">{Math.round(stats.totalCustomersServed * 0.75).toLocaleString()}</span>
+                  <span>60-Day Commission</span>
+                  <span className="stat-value">${stats.commission?.toLocaleString()}</span>
                 </div>
-                <div className="stat-item">
-                  <span>Guaranteed Profit (60 days)</span>
-                  <span className="stat-value">${Math.round(stats.yourProfit * 0.75).toLocaleString()}</span>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

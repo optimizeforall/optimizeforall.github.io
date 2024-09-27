@@ -26,7 +26,7 @@
       const [closeRate, setCloseRate] = useState(50);
       const [profitPerLead, setProfitPerLead] = useState(1000);
       const [leadsPerDay, setLeadsPerDay] = useState(100);
-      const [retentionRate, setRetentionRate] = useState(80);
+      const [retentionRate, setRetentionRate] = useState(0);
       const [monthlyRetainer, setMonthlyRetainer] = useState(0);
       const [stats, setStats] = useState({});
       
@@ -257,7 +257,7 @@
         const guaranteeClients = Math.round(customersGained * 0.60);
 
         // Calculate customers gained per day
-        const customersGainedPerDay = campaignDuration > 0 ? Math.round(customersGained / campaignDuration) : 0;
+        const customersGainedPerDay = campaignDuration > 0 ? (customersGained / campaignDuration).toFixed(2) : 0;
 
         // Set all statistics
         setStats({
@@ -496,16 +496,20 @@
           <div className="stats-section">
             <h3>Performance Statistics</h3>
             <div className="stats">
-              <div className="stat-item">
+              <div className="stat-item green-border">
                 <span>60-Day Profit</span>
                 <span className="stat-value">${stats.sixtyDayProfit?.toLocaleString()}</span>
               </div>
-              <div className="stat-item">
-                <span>60-Day ROI</span>
-                <span className="stat-value">{stats.sixtyDayROI?.toLocaleString()}%</span>
+              <div className="stat-item green-border">
+                <span>60-Day Cost (Retainer + Commission + Package)</span>
+                <span className="stat-value">${stats.sixtyDayCostToUs?.toLocaleString()}</span>
               </div>
               <div className="stat-item">
-                <span>Customers Gained</span>
+                <span>Return on Ad Spend (ROAS)</span>
+                <span className="stat-value">{stats.sixtyDayCostToUs ? (stats.sixtyDayProfit / stats.sixtyDayCostToUs).toFixed(2) : 'N/A'}x</span>
+              </div>
+              <div className="stat-item">
+                <span>60-Day Customers Gain</span>
                 <span className="stat-value">{stats.customersGained?.toLocaleString()}</span>
               </div>
               <div className="stat-item">
@@ -513,39 +517,34 @@
                 <span className="stat-value">{stats.customersGainedPerDay?.toLocaleString() || 'N/A'}</span>
               </div>
               <div className="stat-item">
-                <span>60-Day Cost to Us (Retainer + Commission + Package Cost)</span>
-                <span className="stat-value">${stats.sixtyDayCostToUs?.toLocaleString()}</span>
+                <span>Campaign Duration (When all leads are used)</span>
+                <span className="stat-value">{stats.estimatedDays || 'N/A'} Days</span>
+                </div>
+                <div className="stat-item">
+                  <span>Break-Even Point (Days)</span>
+                  <span className="stat-value">{(stats.dailyProfit > 0 ? Math.ceil(stats.sixtyDayCostToUs / stats.dailyProfit) : 'N/A')}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span>Avg. Profit Per Customer (60 Days)</span>
+                    <span className="stat-value">${stats.customersGained ? (stats.sixtyDayProfit / stats.customersGained).toFixed(2) : 'N/A'}</span>
               </div>
               <div className="stat-item">
-                <span>Campaign Duration (Days)</span>
-                <span className="stat-value">{stats.estimatedDays || 'N/A'}</span>
-              </div>
-              <div className="stat-item">
-                <span>Break-Even Point (Days)</span>
-                <span className="stat-value">{(stats.dailyProfit > 0 ? Math.ceil(stats.sixtyDayCostToUs / stats.dailyProfit) : 'N/A')}</span>
-              </div>
-              <div className="stat-item">
-                <span>Avg. Revenue Per Customer (60 Days)</span>
-                <span className="stat-value">${stats.customersGained ? (stats.sixtyDayProfit / stats.customersGained).toFixed(2) : 'N/A'}</span>
-              </div>
-              <div className="stat-item">
-                <span>Cost Per Acquisition</span>
+                <span>Cost Per Customer Acquisition</span>
                 <span className="stat-value">${stats.customersGained ? (stats.sixtyDayCostToUs / stats.customersGained).toFixed(2) : 'N/A'}</span>
               </div>
+
               <div className="stat-item">
-                <span>Projected Annual Revenue</span>
+                <span>Projected Annual Profit</span>
                 <span className="stat-value">${(stats.sixtyDayProfit * 6).toLocaleString()}</span>
               </div>
-              <div className="stat-item">
-                <span>Return on Ad Spend (ROAS)</span>
-                <span className="stat-value">{stats.sixtyDayCostToUs ? (stats.sixtyDayProfit / stats.sixtyDayCostToUs).toFixed(2) : 'N/A'}x</span>
-              </div>
+
               {leadsPackage === 'custom' && (
                 <div className="stat-item">
                   <span>60-Day Commission</span>
                   <span className="stat-value">${stats.commission?.toLocaleString()}</span>
                 </div>
               )}
+
             </div>
           </div>
 

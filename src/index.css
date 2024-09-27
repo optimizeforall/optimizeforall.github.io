@@ -180,6 +180,14 @@ input[type="range"]:hover::-moz-range-thumb {
     color: var(--primary-color);
 }
 
+.white-border {
+    border: 1px solid yellow;
+}
+
+.green-border {
+    border: 1px solid var(--primary-color);
+}
+
 .custom-package,
 .transparency,
 .guarantee {
